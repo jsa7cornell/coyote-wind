@@ -28,7 +28,8 @@
 
 ## [2026-03-23] — Wind quality colors, colored day tabs, mobile layout, day outlook summary
 
-**Deploy:** pending `vercel --prod`
+**Commit:** `28d2abb`
+**Deploy:** `vercel --prod` → https://wind.sendmo.co
 
 ### What shipped
 - **Quality-gradient wind colors** — forecast cells now lerp from dark green (peak great range) to yellowish-green (barely marginal). Bad direction and out-of-range speeds stay muted/red as before. Color is computed per-location using each spot's `great` and `marginal` ranges.
