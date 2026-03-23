@@ -172,30 +172,11 @@
       line-height: 1.4;
     }
 
-    /* --- Verdict --- */
-    .verdict {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      transition: all 0.4s ease;
-    }
-    .verdict.go      { background: linear-gradient(135deg,#0d3d1f,#0a4a1a); border: 1px solid #1a7a35; }
-    .verdict.marginal{ background: linear-gradient(135deg,#3d2d00,#4a3800); border: 1px solid #7a5a00; }
-    .verdict.no-go   { background: linear-gradient(135deg,#3d0f0f,#4a0a0a); border: 1px solid #7a1515; }
-    .verdict.loading { background: #0d1e35; border: 1px solid #1e3a5f; }
-
-    .verdict-icon { font-size: 20px; flex-shrink: 0; line-height: 1; }
-    .verdict-body { flex: 1; min-width: 0; }
-    .verdict-row1 { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-    .verdict-main { font-size: 15px; font-weight: 700; }
-    .verdict.go       .verdict-main { color: #4cd97a; }
-    .verdict.marginal .verdict-main { color: #f5c842; }
-    .verdict.no-go    .verdict-main { color: #f55; }
-    .verdict.loading  .verdict-main { color: #5b8ab0; }
-    .verdict-meta { font-size: 12px; color: rgba(255,255,255,0.5); }
+    /* --- Forecast summary line --- */
+    .forecast-summary { font-size: 12px; font-weight: 500; padding: 4px 0 8px; min-height: 1em; }
+    .forecast-summary.rideable-now { color: #4cd97a; }
+    .forecast-summary.upcoming     { color: #7ab8e8; }
+    .forecast-summary.no-window    { color: #3d6080; }
 
 
     /* --- Range bar --- */
@@ -533,28 +514,6 @@
 
     .ftgc  { height: 28px; font-size: 11px; }
 
-    .verdict-outlook { font-size: 11px; font-weight: 500; margin-top: 3px; }
-    .verdict.go       .verdict-outlook { color: #6ee892; }
-    .verdict.marginal .verdict-outlook { color: #e8d060; }
-    .verdict.no-go    .verdict-outlook { color: #7ab8e8; }
-    .verdict.loading  .verdict-outlook { display: none; }
-
-    .danger-warning {
-      display: none;
-      align-items: flex-start;
-      gap: 6px;
-      background: rgba(180, 20, 20, 0.35);
-      border: 1px solid rgba(255, 60, 60, 0.4);
-      border-radius: 8px;
-      padding: 7px 10px;
-      margin-top: 10px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #ff8080;
-      line-height: 1.4;
-    }
-    .danger-warning.visible { display: flex; }
-    .danger-warning-icon { font-size: 13px; flex-shrink: 0; line-height: 1.5; }
 
     /* --- Bottom --- */
     .updated { text-align: center; font-size: 12px; color: #3d6080; margin-bottom: 16px; }
@@ -712,28 +671,13 @@
     <div class="app-name"><span class="app-name-wind">WIND</span><span class="app-name-ow">ow</span></div>
     <div class="loc-pills" id="loc-pills"></div>
 
-    <div class="verdict loading" id="verdict">
-      <div class="verdict-icon" id="verdict-icon">💨</div>
-      <div class="verdict-body">
-        <div class="verdict-row1">
-          <span class="verdict-main" id="verdict-main">Loading…</span>
-          <span class="verdict-meta" id="verdict-meta"></span>
-        </div>
-        <div class="verdict-outlook" id="verdict-outlook"></div>
-        <div class="danger-warning" id="danger-warning">
-          <span class="danger-warning-icon">⚠️</span>
-          <span id="danger-warning-text"></span>
-        </div>
-      </div>
-      <button class="next-window-btn none" id="next-window-btn" onclick="jumpToNextGoodWindow()" disabled></button>
-    </div>
-
     <!-- Forecast -->
     <div class="forecast-section">
       <div class="forecast-header">
         <div class="forecast-header-row">
           <span class="forecast-title">Hourly Forecast</span>
         </div>
+        <div id="forecast-summary" class="forecast-summary"></div>
         <div class="day-tabs" id="day-tabs"></div>
       </div>
       <div class="chart-wrap">
@@ -846,15 +790,6 @@
         el.classList.toggle('wc-selected', i === idx);
       });
       const h = currentDayHours[idx];
-      const compass = degreesToCompass(h.dir);
-      const verdict = getVerdict(h.speed, h.gusts, h.dir);
-      const vEl = document.getElementById('verdict');
-      vEl.className = `verdict ${verdict.cls}`;
-      document.getElementById('verdict-icon').textContent = verdict.icon;
-      document.getElementById('verdict-main').textContent = verdict.main;
-      document.getElementById('verdict-meta').textContent = `${h.speed} mph · ${compass}`;
-      document.getElementById('verdict-outlook').textContent = '';
-      setDangerWarning(h.speed, h.gusts, h.dir);
       const pct = Math.min(Math.max((h.speed / MAX_SPEED) * 100, 2), 98);
       document.getElementById('range-marker').style.left = `${pct}%`;
     }
@@ -1265,16 +1200,11 @@
       updateNextWindowBtn();
     }
 
-    // ---- Day outlook summary ----
+    // ---- Forecast summary line ----
     function getDayOutlook() {
-      if (!hourlyData.length) return '';
+      if (!hourlyData.length) return { text: '', cls: '' };
       const loc = getLoc();
       const now = new Date();
-      const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
-      const todayHours = hourlyData.filter(h => {
-        const k = `${h.time.getFullYear()}-${h.time.getMonth()}-${h.time.getDate()}`;
-        return k === todayKey && h.time.getHours() >= 10 && h.time.getHours() <= 20;
-      });
       const fmt = t => {
         const hr = t.getHours();
         return `${hr === 0 ? 12 : hr > 12 ? hr - 12 : hr}${hr >= 12 ? 'pm' : 'am'}`;
@@ -1283,32 +1213,34 @@
         const c = degreesToCompass(h.dir);
         return loc.goodDirs.includes(c) && h.speed >= loc.marginal[0];
       };
-      const isGreat = h => {
-        const c = degreesToCompass(h.dir);
-        return loc.goodDirs.includes(c) && h.speed >= loc.great[0] && h.speed <= loc.great[1];
-      };
-      const upcoming = todayHours.filter(h => h.time >= now);
-      const futureGood = upcoming.filter(isRideable);
-      if (!futureGood.length) {
-        // Look for next day with a rideable window
-        const nextResult = findNextGoodWindow();
-        if (nextResult) {
-          const t = nextResult.hour.time;
-          const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-          const dayStr = nextResult.dayIdx === 1 ? 'Tmrw' : days[t.getDay()];
-          return `No window today — next: ${dayStr} ${fmt(t)}`;
-        }
-        return 'No rideable window in the next 10 days';
-      }
-      const first = futureGood[0];
-      const last  = futureGood[futureGood.length - 1];
-      const hasGreat = futureGood.some(isGreat);
-      const quality = hasGreat ? 'Great' : 'Rideable';
+      const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+      const todayHours = hourlyData.filter(h => {
+        const k = `${h.time.getFullYear()}-${h.time.getMonth()}-${h.time.getDate()}`;
+        return k === todayKey && h.time.getHours() >= 10 && h.time.getHours() <= 20;
+      });
       const nowHour = todayHours.find(h => Math.abs(h.time - now) < 30 * 60 * 1000);
-      const currentlyGood = nowHour && isRideable(nowHour);
-      if (currentlyGood) return `${quality} now through ${fmt(last.time)}`;
-      if (first === last) return `Should be rideable at ${fmt(first.time)}`;
-      return `Should be rideable ${fmt(first.time)}–${fmt(last.time)}`;
+      if (nowHour && isRideable(nowHour)) {
+        return { text: 'Currently rideable!', cls: 'rideable-now' };
+      }
+      const futureGood = todayHours.filter(h => h.time > now && isRideable(h));
+      if (futureGood.length) {
+        return { text: `Should be rideable by ${fmt(futureGood[0].time)}`, cls: 'upcoming' };
+      }
+      // Look beyond today
+      const next = findNextGoodWindow();
+      if (next) {
+        const t = next.hour.time;
+        const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        const dayStr = next.dayIdx === 1 ? 'tomorrow' : days[t.getDay()];
+        return { text: `Not rideable til ${dayStr} ${fmt(t)}`, cls: 'upcoming' };
+      }
+      return { text: 'No rideable window in the next 10 days', cls: 'no-window' };
+    }
+
+    function updateForecastSummary() {
+      const { text, cls } = getDayOutlook();
+      const el = document.getElementById('forecast-summary');
+      if (el) { el.textContent = text; el.className = `forecast-summary ${cls}`; }
     }
 
     // ---- Main fetch ----
@@ -1328,22 +1260,8 @@
 
         const [cData, hData] = await Promise.all([currentRes.json(), hourlyRes.json()]);
 
-        // --- Current conditions ---
-        const c = cData.current;
-        const speed  = Math.round(c.wind_speed_10m);
-        const gusts  = Math.round(c.wind_gusts_10m);
-        const dir    = c.wind_direction_10m;
-        const compass = degreesToCompass(dir);
-        const verdict = getVerdict(speed, gusts, dir);
-
-        const vEl = document.getElementById('verdict');
-        vEl.className = `verdict ${verdict.cls}`;
-        document.getElementById('verdict-icon').textContent = verdict.icon;
-        document.getElementById('verdict-main').textContent = verdict.main;
-        document.getElementById('verdict-meta').textContent = `${speed} mph · ${compass}`;
-        setDangerWarning(speed, gusts, dir);
-
-
+        // --- Current conditions (range marker only) ---
+        const speed = Math.round(cData.current.wind_speed_10m);
         const pct = Math.min(Math.max((speed / MAX_SPEED) * 100, 2), 98);
         document.getElementById('range-marker').style.left = `${pct}%`;
 
@@ -1356,8 +1274,7 @@
           dir:   h.wind_direction_10m[i],
         }));
         renderForecast();
-        const outlookEl = document.getElementById('verdict-outlook');
-        if (outlookEl) outlookEl.textContent = getDayOutlook();
+        updateForecastSummary();
 
         // Updated timestamp
         const now = new Date();
