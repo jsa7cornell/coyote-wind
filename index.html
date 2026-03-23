@@ -197,26 +197,6 @@
     .verdict.loading  .verdict-main { color: #5b8ab0; }
     .verdict-meta { font-size: 12px; color: rgba(255,255,255,0.5); }
 
-    /* --- Stats --- */
-    .stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 32px;
-    }
-    .stat {
-      background: #0d1e35;
-      border-radius: 12px;
-      padding: 18px;
-      border: 1px solid #1e3a5f;
-    }
-    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #5b8ab0; margin-bottom: 6px; }
-    .stat-value { font-size: 32px; font-weight: 700; color: #e8f4fd; line-height: 1; }
-    .stat-unit  { font-size: 14px; color: #5b8ab0; margin-left: 3px; }
-    .stat-sub   { font-size: 13px; color: #3d6080; margin-top: 4px; }
-
-    .wind-arrow-wrapper { display: flex; align-items: center; gap: 10px; }
-    .wind-arrow { font-size: 28px; display: inline-block; }
 
     /* --- Range bar --- */
     .wind-range {
@@ -751,23 +731,6 @@
       <button class="next-window-btn none" id="next-window-btn" onclick="jumpToNextGoodWindow()" disabled></button>
     </div>
 
-    <div class="stats">
-      <div class="stat">
-        <div class="stat-label">Wind Speed</div>
-        <div class="stat-value" id="speed">—<span class="stat-unit">mph</span></div>
-        <div class="stat-sub" id="gusts">Gusts: —</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Direction</div>
-        <div class="stat-value">
-          <div class="wind-arrow-wrapper">
-            <span class="wind-arrow" id="arrow">—</span>
-            <span id="direction-text" style="font-size:16px;color:#5b8ab0">—</span>
-          </div>
-        </div>
-        <div class="stat-sub" id="direction-deg">— degrees</div>
-      </div>
-    </div>
 
     <div class="wind-range">
       <div class="wind-range-label">Wingfoil Wind Window (mph)</div>
@@ -891,11 +854,6 @@
       document.getElementById('verdict-meta').textContent = `${h.speed} mph · ${compass}`;
       document.getElementById('verdict-outlook').textContent = '';
       setDangerWarning(h.speed, h.gusts, h.dir);
-      document.getElementById('speed').innerHTML = `${h.speed}<span class="stat-unit">mph</span>`;
-      document.getElementById('gusts').textContent = `Gusts: ${h.gusts} mph`;
-      document.getElementById('arrow').textContent = degreesToArrow(h.dir);
-      document.getElementById('direction-text').textContent = compass;
-      document.getElementById('direction-deg').textContent = `${h.dir}° (from)`;
       const pct = Math.min(Math.max((h.speed / MAX_SPEED) * 100, 2), 98);
       document.getElementById('range-marker').style.left = `${pct}%`;
     }
@@ -1370,11 +1328,6 @@
         document.getElementById('verdict-meta').textContent = `${speed} mph · ${compass}`;
         setDangerWarning(speed, gusts, dir);
 
-        document.getElementById('speed').innerHTML = `${speed}<span class="stat-unit">mph</span>`;
-        document.getElementById('gusts').textContent = `Gusts: ${gusts} mph`;
-        document.getElementById('arrow').textContent = degreesToArrow(dir);
-        document.getElementById('direction-text').textContent = compass;
-        document.getElementById('direction-deg').textContent = `${dir}° (from)`;
 
         const pct = Math.min(Math.max((speed / MAX_SPEED) * 100, 2), 98);
         document.getElementById('range-marker').style.left = `${pct}%`;
