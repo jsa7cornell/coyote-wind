@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WINDow — John's Wingfoil Conditions</title>
+  <meta name="description" content="Real-time wingfoil wind forecasts for John's spots — Coyote Point, Crissy Field, and La Ventana. Go/no-go verdict, wing size guide, and calendar alerts when conditions are good. More spots available on request.">
+  <meta property="og:title" content="WINDow — John's Wingfoil Conditions">
+  <meta property="og:description" content="Know before you go. Real-time wingfoil forecasts for Bay Area & Baja. Subscribe to wind alerts in your calendar.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wind.sendmo.co">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f2040">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WINDow">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a1628;
+      color: #e8f4fd;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: #0f2040;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 560px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      border: 1px solid #1e3a5f;
+    }
+
+    .location {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #5b8ab0;
+      margin-bottom: 6px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #e8f4fd;
+      margin-bottom: 4px;
+    }
+
+    .coords {
+      font-size: 12px;
+      color: #3d6080;
+      margin-bottom: 8px;
+    }
+
+    .loc-desc {
+      font-size: 12px;
+      color: #5b8ab0;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    /* --- Location pills --- */
+    .loc-pills {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .loc-pill {
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #0d1e35;
+      color: #5b8ab0;
+      border: 1px solid #1e3a5f;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .loc-pill:hover { border-color: #2a5080; color: #7ab8e8; }
+    .loc-pill.active { background: #1a3a6a; color: #e8f4fd; border-color: #3a6090; }
+
+    /* --- Location header (name + calendar icon) --- */
+    .loc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .loc-header h1 { flex: 1; margin-bottom: 0; }
+    .loc-cal-wrap { position: relative; flex-shrink: 0; }
+
+    /* --- Calendar subscribe --- */
+    .cal-icon {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: #0d1e35;
+      border: 1px solid #1e3a5f;
+      color: #5b8ab0;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .cal-icon:hover { border-color: #2a5080; color: #7ab8e8; background: #132a48; }
+
+    .cal-popover {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: #0f2040;
+      border: 1px solid #1e3a5f;
+      border-radius: 14px;
+      padding: 16px;
+      width: 240px;
+      z-index: 100;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    }
+    .cal-popover.open { display: block; }
+    .cal-popover::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      right: 8px;
+      transform: rotate(45deg);
+      width: 10px; height: 10px;
+      background: #0f2040;
+      border-left: 1px solid #1e3a5f;
+      border-top: 1px solid #1e3a5f;
+    }
+    .cal-popover-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #e8f4fd;
+      margin-bottom: 12px;
+    }
+    .cal-btn {
+      display: block;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      border: none;
+      margin-bottom: 6px;
+      text-decoration: none;
+    }
+    .cal-btn-google {
+      background: #1a3a6a;
+      color: #7ab8e8;
+    }
+    .cal-btn-google:hover { background: #1e4a80; color: #a8d0f0; }
+    .cal-btn-copy {
+      background: #0d1e35;
+      color: #5b8ab0;
+      border: 1px solid #1e3a5f;
+    }
+    .cal-btn-copy:hover { border-color: #2a5080; color: #7ab8e8; }
+    .cal-hint {
+      font-size: 10px;
+      color: #3d6080;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    /* --- Verdict --- */
+    .verdict {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 20px 24px;
+      border-radius: 14px;
+      margin-bottom: 32px;
+      transition: all 0.4s ease;
+    }
+    .verdict.go      { background: linear-gradient(135deg,#0d3d1f,#0a4a1a); border: 1px solid #1a7a35; }
+    .verdict.marginal{ background: linear-gradient(135deg,#3d2d00,#4a3800); border: 1px solid #7a5a00; }
+    .verdict.no-go   { background: linear-gradient(135deg,#3d0f0f,#4a0a0a); border: 1px solid #7a1515; }
+    .verdict.loading { background: #0d1e35; border: 1px solid #1e3a5f; }
+
+    .verdict-icon { font-size: 36px; line-height: 1; }
+    .verdict-text { flex: 1; }
+    .verdict-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.6; margin-bottom: 2px; }
+    .verdict-main  { font-size: 22px; font-weight: 700; }
+    .verdict.go       .verdict-main { color: #4cd97a; }
+    .verdict.marginal .verdict-main { color: #f5c842; }
+    .verdict.no-go    .verdict-main { color: #f55; }
+    .verdict.loading  .verdict-main { color: #5b8ab0; }
+    .verdict-note { font-size: 13px; opacity: 0.7; margin-top: 2px; }
+
+    /* --- Stats --- */
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat {
+      background: #0d1e35;
+      border-radius: 12px;
+      padding: 18px;
+      border: 1px solid #1e3a5f;
+    }
+    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #5b8ab0; margin-bottom: 6px; }
+    .stat-value { font-size: 32px; font-weight: 700; color: #e8f4fd; line-height: 1; }
+    .stat-unit  { font-size: 14px; color: #5b8ab0; margin-left: 3px; }
+    .stat-sub   { font-size: 13px; color: #3d6080; margin-top: 4px; }
+
+    .wind-arrow-wrapper { display: flex; align-items: center; gap: 10px; }
+    .wind-arrow { font-size: 28px; display: inline-block; }
+
+    /* --- Range bar --- */
+    .wind-range {
+      background: #0d1e35;
+      border-radius: 12px;
+      padding: 16px 18px;
+      border: 1px solid #1e3a5f;
+      margin-bottom: 28px;
+    }
+    .wind-range-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #5b8ab0; margin-bottom: 12px; }
+    .range-bar { position: relative; height: 8px; background: #1e3a5f; border-radius: 4px; overflow: visible; margin-bottom: 8px; }
+    .range-good  { position: absolute; left: 26%; right: 30%; height: 100%; background: linear-gradient(90deg,#f5c842,#4cd97a,#f5c842); border-radius: 4px; opacity: 0.5; }
+    .range-great { position: absolute; left: 40%; right: 37%; height: 100%; background: #4cd97a; border-radius: 4px; opacity: 0.7; }
+    .range-marker { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 14px; height: 14px; background: #fff; border-radius: 50%; border: 2px solid #0a1628; box-shadow: 0 0 6px rgba(255,255,255,0.4); transition: left 0.6s ease; }
+    .range-labels { display: flex; justify-content: space-between; font-size: 11px; color: #3d6080; }
+    .conditions-key { display: flex; gap: 10px; margin-top: 10px; font-size: 11px; color: #3d6080; flex-wrap: wrap; }
+    .key-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+
+    /* --- Forecast --- */
+    .forecast-section {
+      background: #0d1e35;
+      border-radius: 14px;
+      border: 1px solid #1e3a5f;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .forecast-header {
+      padding: 14px 18px 0;
+    }
+
+    .forecast-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .forecast-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #5b8ab0;
+    }
+
+    .day-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .day-tab {
+      padding: 5px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      background: transparent;
+      color: #3d6080;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .day-tab:hover { color: #7ab8e8; }
+    .day-tab.active { background: #1a3a6a; color: #7ab8e8; border-color: #2a5080; }
+    .tab-date { display: block; font-size: 10px; font-weight: 400; opacity: 0.65; margin-top: 1px; }
+    .day-tab.has-great    .tab-date { color: #4cd97a; opacity: 1; }
+    .day-tab.has-marginal .tab-date { color: #a0d030; opacity: 1; }
+
+    .chart-wrap {
+      overflow-x: auto;
+      padding: 14px 18px 16px;
+      scrollbar-width: thin;
+      scrollbar-color: #1e3a5f transparent;
+    }
+    .chart-wrap::-webkit-scrollbar { height: 4px; }
+    .chart-wrap::-webkit-scrollbar-track { background: transparent; }
+    .chart-wrap::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 2px; }
+
+    .chart-inner { display: flex; flex-direction: column; gap: 0; }
+
+    .chart-container { position: relative; }
+
+    /* dir + speed rows share the same left indent as the bars */
+    .dir-row, .speed-row, .chart-times {
+      display: flex;
+      gap: 3px;
+      padding-left: 28px;
+    }
+
+    .hour-dir {
+      min-width: 22px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hour-speed {
+      min-width: 22px;
+      font-size: 9px;
+      color: transparent;
+      text-align: center;
+      height: 12px;
+      line-height: 12px;
+    }
+    .hour-speed.visible { color: #a0c8e8; }
+
+    /* bars-wrapper is the reference point for y-axis labels */
+    .bars-wrapper {
+      position: relative;
+      padding-left: 28px;
+    }
+
+    .chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 90px;
+      position: relative;
+    }
+
+    /* y-axis guide lines */
+    .chart-bars::before,
+    .chart-bars::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 1px;
+      background: #1e3a5f;
+      pointer-events: none;
+    }
+    .chart-bars::before { bottom: calc(10/30 * 90px); }
+    .chart-bars::after  { bottom: calc(20/30 * 90px); }
+
+    .hour-col {
+      min-width: 22px;
+      position: relative;
+    }
+
+    .hour-col.now-marker .hour-bar-wrap::after {
+      content: '';
+      position: absolute;
+      top: -4px; left: 50%;
+      transform: translateX(-50%);
+      width: 4px; height: 4px;
+      background: #fff;
+      border-radius: 50%;
+    }
+
+    .hour-bar-wrap {
+      position: relative;
+      width: 100%;
+      display: flex;
+      align-items: flex-end;
+      height: 90px;
+    }
+
+    .hour-bar {
+      width: 100%;
+      border-radius: 3px 3px 0 0;
+      transition: height 0.4s ease, background 0.4s ease;
+      min-height: 2px;
+    }
+
+    .hour-bar.great    { background: #4cd97a; }
+    .hour-bar.marginal { background: #f5c842; }
+    .hour-bar.no-go    { background: #2a4060; }
+    .hour-bar.now      { outline: 2px solid #fff; outline-offset: 1px; }
+
+    .chart-times { margin-top: 5px; }
+
+    .hour-time {
+      min-width: 22px;
+      font-size: 9px;
+      color: #3d6080;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .hour-time.labeled { color: #5b8ab0; font-weight: 600; }
+
+    .y-labels {
+      position: absolute;
+      right: calc(100% + 4px);
+      top: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .y-label {
+      font-size: 9px;
+      color: #3d6080;
+      text-align: right;
+    }
+
+    .no-forecast {
+      padding: 20px;
+      text-align: center;
+      font-size: 13px;
+      color: #3d6080;
+    }
+
+    .next-window-btn {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #4cd97a;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      margin-top: 10px;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+      transition: color 0.15s;
+    }
+    .next-window-btn:hover { color: #6ee892; }
+    .next-window-btn.none  { color: #3d6080; cursor: default; }
+
+    /* --- View toggle --- */
+    .forecast-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .view-toggle { display: flex; gap: 3px; }
+    .view-btn {
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      background: transparent;
+      color: #3d6080;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .view-btn:hover { color: #7ab8e8; }
+    .view-btn.active { background: #1a3a6a; color: #7ab8e8; border-color: #2a5080; }
+
+    /* --- Forecast table (iKitesurf-style) --- */
+    .ftable { border-collapse: separate; border-spacing: 2px; width: max-content; }
+
+    .ftlabel {
+      position: sticky;
+      left: 0;
+      background: #0d1e35;
+      z-index: 2;
+      padding: 0 10px 0 0;
+      text-align: left;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #5b8ab0;
+      white-space: nowrap;
+      min-width: 52px;
+      vertical-align: middle;
+    }
+    .ftlabel em { font-style:normal; font-size:9px; text-transform:none; letter-spacing:0; color:#3d6080; display:block; }
+
+    .fthour {
+      min-width: 32px;
+      height: 22px;
+      font-size: 8px;
+      color: transparent;
+      text-align: center;
+      vertical-align: middle;
+      padding: 0 1px;
+    }
+    .fthour.ftlabeled { color: #5b8ab0; font-weight: 600; }
+    .fthour.ft-now    { color: #fff !important; font-weight: 700; }
+
+    .ftcell {
+      min-width: 32px;
+      border-radius: 4px;
+      text-align: center;
+      vertical-align: middle;
+      font-weight: 700;
+      transition: background 0.3s;
+      padding: 0;
+    }
+    .ftcell.ft-now { outline: 2px solid rgba(255,255,255,0.55); outline-offset: -1px; }
+    .ftwc.wc-selected  { box-shadow: 2px 0 0 #7ab8e8 inset, -2px 0 0 #7ab8e8 inset, 0 2px 0 #7ab8e8 inset; }
+    .ftgc.wc-selected  { box-shadow: 2px 0 0 #7ab8e8 inset, -2px 0 0 #7ab8e8 inset, 0 -2px 0 #7ab8e8 inset; }
+    .ftwc { cursor: pointer; }
+    .ftwc:hover { filter: brightness(1.15); }
+
+    /* combined wind cell */
+    .ftwc { height: 100px; vertical-align: top; padding: 0 !important; }
+
+    .wc-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      padding: 4px 1px 3px;
+    }
+    .wc-speed {
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .wc-bar-area {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 2px 4px 0;
+    }
+    .wc-bar {
+      width: 100%;
+      background: rgba(255,255,255,0.18);
+      border-radius: 2px 2px 0 0;
+      min-height: 2px;
+    }
+    .wc-arrow {
+      display: block;
+      font-size: 10px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .wc-compass {
+      font-size: 7px;
+      font-weight: 500;
+      opacity: 0.75;
+      flex-shrink: 0;
+      line-height: 1.4;
+    }
+
+    .ftgc  { height: 28px; font-size: 11px; }
+
+    .verdict-outlook { font-size: 12px; font-weight: 500; margin-top: 5px; }
+    .verdict.go       .verdict-outlook { color: #6ee892; }
+    .verdict.marginal .verdict-outlook { color: #e8d060; }
+    .verdict.no-go    .verdict-outlook { color: #7ab8e8; }
+    .verdict.loading  .verdict-outlook { display: none; }
+    .verdict-funny { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 5px; font-style: italic; }
+    .verdict-wing  { font-size: 12px; font-weight: 600; margin-top: 2px; }
+    .verdict.go .verdict-wing       { color: #4cd97a; }
+    .verdict.marginal .verdict-wing { color: #f5c842; }
+    .verdict.no-go .verdict-wing    { color: #888; }
+    .verdict.loading .verdict-wing  { display: none; }
+
+    .danger-warning {
+      display: none;
+      align-items: flex-start;
+      gap: 6px;
+      background: rgba(180, 20, 20, 0.35);
+      border: 1px solid rgba(255, 60, 60, 0.4);
+      border-radius: 8px;
+      padding: 7px 10px;
+      margin-top: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #ff8080;
+      line-height: 1.4;
+    }
+    .danger-warning.visible { display: flex; }
+    .danger-warning-icon { font-size: 13px; flex-shrink: 0; line-height: 1.5; }
+
+    /* --- Bottom --- */
+    .updated { text-align: center; font-size: 12px; color: #3d6080; margin-bottom: 16px; }
+
+    .refresh-btn {
+      display: block; width: 100%; padding: 14px;
+      background: #1a3a6a; color: #7ab8e8;
+      border: 1px solid #2a5080; border-radius: 12px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: all 0.2s; text-align: center; letter-spacing: 0.5px;
+    }
+    .refresh-btn:hover { background: #1e4a80; color: #a8d0f0; }
+    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(122,184,232,0.3); border-top-color: #7ab8e8;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg { text-align: center; color: #f55; font-size: 13px; margin-top: 12px; }
+    .attribution { text-align: center; font-size: 11px; color: #2a4060; margin-top: 12px; }
+    .attribution a { color: #3a5878; text-decoration: none; }
+    .attribution a:hover { color: #5b8ab0; }
+
+    /* --- App name --- */
+    .app-name {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .app-name-wind { color: #4cd97a; }
+    .app-name-ow   { color: #3d6080; }
+
+    /* --- Calendar promo strip --- */
+    .cal-promo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #0d1e35;
+      border: 1px solid #1e3a5f;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 16px;
+      font-size: 12px;
+      color: #5b8ab0;
+      line-height: 1.4;
+    }
+    .cal-promo-icon { font-size: 18px; flex-shrink: 0; }
+    .cal-promo strong { color: #7ab8e8; font-weight: 600; }
+
+    /* --- Footer note --- */
+    .spots-note {
+      text-align: center;
+      font-size: 11px;
+      color: #2a4060;
+      margin-top: 10px;
+    }
+    .spots-note a { color: #3a5878; text-decoration: none; }
+    .spots-note a:hover { color: #5b8ab0; }
+
+    /* --- Install banner --- */
+    .install-banner {
+      display: none;
+      background: #0d1e35;
+      border: 1px solid #1e3a5f;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-top: 16px;
+      position: relative;
+    }
+    .install-banner.visible { display: flex; align-items: center; gap: 12px; }
+    .install-banner-icon { font-size: 26px; flex-shrink: 0; line-height: 1; }
+    .install-banner-body { flex: 1; }
+    .install-banner-title { font-size: 13px; font-weight: 600; color: #e8f4fd; margin-bottom: 3px; }
+    .install-banner-sub { font-size: 11px; color: #5b8ab0; line-height: 1.4; }
+    .install-banner-sub strong { color: #7ab8e8; font-weight: 600; }
+    .install-banner-btn {
+      padding: 8px 14px;
+      background: #1a3a6a;
+      color: #7ab8e8;
+      border: 1px solid #2a5080;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .install-banner-btn:hover { background: #1e4a80; color: #a8d0f0; }
+    .install-banner-dismiss {
+      position: absolute;
+      top: 8px; right: 10px;
+      font-size: 16px;
+      color: #3d6080;
+      cursor: pointer;
+      line-height: 1;
+      background: none;
+      border: none;
+      padding: 2px 4px;
+    }
+    .install-banner-dismiss:hover { color: #5b8ab0; }
+
+    /* --- Mobile layout --- */
+    @media (max-width: 500px) {
+      body { padding: 8px; justify-content: flex-start; padding-top: 12px; }
+      .card { padding: 16px 12px 20px; border-radius: 14px; }
+
+      /* Day tabs: scroll horizontally, never wrap */
+      .day-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px;
+        scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+      .day-tabs::-webkit-scrollbar { display: none; }
+      .day-tab { flex-shrink: 0; }
+
+      /* Forecast header tighten */
+      .forecast-header { padding: 10px 10px 0; }
+      .chart-wrap { padding: 10px 8px 12px; overflow-x: hidden; }
+
+      /* Table fills width, cells size automatically */
+      .ftable { width: 100%; table-layout: fixed; border-spacing: 1px; }
+      .ftlabel { min-width: 28px; font-size: 8px; padding: 0 4px 0 0; letter-spacing: 0; }
+      .ftlabel em { display: none; }
+      .fthour { min-width: 0; font-size: 7px; }
+      .ftcell { min-width: 0; }
+
+      /* Wind cell smaller on mobile */
+      .ftwc { height: 78px; }
+      .wc-speed { font-size: 10px; }
+      .wc-arrow { font-size: 9px; }
+      .wc-compass { font-size: 6px; }
+      .wc-bar-area { padding: 1px 2px 0; }
+      .ftgc { height: 22px; font-size: 10px; }
+
+      /* Conditions key wrap neatly */
+      .conditions-key { gap: 6px; }
+
+      /* Loc pills tighter */
+      .loc-pill { padding: 5px 10px; font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="app-name"><span class="app-name-wind">WIND</span><span class="app-name-ow">ow</span></div>
+    <div class="loc-pills" id="loc-pills"></div>
+    <div class="loc-header">
+      <h1 id="loc-name">Coyote Point</h1>
+      <div class="loc-cal-wrap">
+        <button class="cal-icon" onclick="toggleMainCalPopover(event)" title="Subscribe to wind alerts">📅</button>
+        <div class="cal-popover" id="cal-pop-main"></div>
+      </div>
+    </div>
+    <div class="coords" id="loc-coords">37.5933° N, 122.3196° W</div>
+    <div class="loc-desc" id="loc-desc"></div>
+
+    <div class="verdict loading" id="verdict">
+      <div class="verdict-icon">💨</div>
+      <div class="verdict-text">
+        <div class="verdict-label">Conditions</div>
+        <div class="verdict-main" id="verdict-main">Loading…</div>
+        <div class="verdict-note" id="verdict-note">Fetching latest wind data</div>
+        <div class="verdict-outlook" id="verdict-outlook"></div>
+        <div class="verdict-funny" id="verdict-funny"></div>
+        <div class="verdict-wing" id="verdict-wing"></div>
+        <div class="danger-warning" id="danger-warning">
+          <span class="danger-warning-icon">⚠️</span>
+          <span id="danger-warning-text"></span>
+        </div>
+        <button class="next-window-btn none" id="next-window-btn" onclick="jumpToNextGoodWindow()" disabled>Next WINDow →</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Wind Speed</div>
+        <div class="stat-value" id="speed">—<span class="stat-unit">mph</span></div>
+        <div class="stat-sub" id="gusts">Gusts: —</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Direction</div>
+        <div class="stat-value">
+          <div class="wind-arrow-wrapper">
+            <span class="wind-arrow" id="arrow">—</span>
+            <span id="direction-text" style="font-size:16px;color:#5b8ab0">—</span>
+          </div>
+        </div>
+        <div class="stat-sub" id="direction-deg">— degrees</div>
+      </div>
+    </div>
+
+    <div class="wind-range">
+      <div class="wind-range-label">Wingfoil Wind Window (mph)</div>
+      <div class="range-bar">
+        <div class="range-good"></div>
+        <div class="range-great"></div>
+        <div class="range-marker" id="range-marker" style="left:0%"></div>
+      </div>
+      <div class="range-labels">
+        <span>0</span><span>8</span><span>12</span><span>18</span><span>25+</span>
+      </div>
+      <div class="conditions-key">
+        <span><span class="key-dot" style="background:#4cd97a"></span>Great (12–18)</span>
+        <span><span class="key-dot" style="background:#f5c842"></span>Marginal (8–12 / 18–25)</span>
+        <span><span class="key-dot" style="background:#2a4060"></span>No-go</span>
+      </div>
+    </div>
+
+    <!-- Forecast -->
+    <div class="forecast-section">
+      <div class="forecast-header">
+        <div class="forecast-header-row">
+          <span class="forecast-title">Hourly Forecast</span>
+        </div>
+        <div class="day-tabs" id="day-tabs"></div>
+      </div>
+      <div class="chart-wrap">
+        <div id="forecast-chart" class="no-forecast">Loading forecast…</div>
+      </div>
+    </div>
+
+    <div class="updated" id="updated">—</div>
+    <div class="error-msg" id="error-msg"></div>
+
+    <!-- Calendar promo -->
+    <div class="cal-promo">
+      <span class="cal-promo-icon">📅</span>
+      <span>Get <strong>wind alerts in your calendar</strong> — events appear when conditions are good, disappear when they're not. Tap <strong>📅</strong> next to the spot name to subscribe.</span>
+    </div>
+
+    <!-- Install to home screen banner -->
+    <div class="install-banner" id="install-banner">
+      <div class="install-banner-icon" id="install-icon">📲</div>
+      <div class="install-banner-body">
+        <div class="install-banner-title" id="install-title">Add to Home Screen</div>
+        <div class="install-banner-sub" id="install-sub"></div>
+      </div>
+      <button class="install-banner-btn" id="install-btn" style="display:none">Install</button>
+      <button class="install-banner-dismiss" id="install-dismiss" title="Dismiss">✕</button>
+    </div>
+
+    <div class="spots-note">John's spots. More locations available — <a href="mailto:jsa7cornell@gmail.com?subject=WINDow%20spot%20request" target="_blank">request yours</a>.</div>
+    <div class="attribution">Wind data via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> (NOAA GFS/HRRR &amp; ECMWF models)</div>
+  </div>
+
+  <script>
+    const LOCATIONS = [
+      {
+        name: 'Coyote Point', city: 'San Mateo, CA',
+        lat: 37.5933, lon: -122.3196,
+        goodDirs: ['W','WNW','NW','NNW','SW','WSW'],
+        great: [12, 25], marginal: [8, 35],
+        description: 'The Bay\'s most accessible wingfoil spot — consistent afternoon seabreeze, flat protected water, easy beach launch.',
+      },
+      {
+        name: 'Crissy Field', city: 'San Francisco, CA',
+        lat: 37.8042, lon: -122.4597,
+        goodDirs: ['W','WNW','NW','NNW','SW','WSW'],
+        great: [15, 28], marginal: [10, 38],
+        description: 'Powerful Golden Gate winds make this one of the West Coast\'s most iconic kite and wing venues — strong currents, experienced riders only.',
+      },
+      {
+        name: 'La Ventana', city: 'Baja Sur, MX',
+        lat: 24.0465, lon: -109.9943,
+        goodDirs: ['N','NNE','NNW','NW','NE'],
+        great: [15, 30], marginal: [10, 40],
+        description: 'World-class kite and wing destination on the Sea of Cortez, famous for consistent El Norte winds from October through March.',
+      },
+      {
+        name: 'Milwaukee', city: 'Bradford Beach, WI',
+        lat: 43.0568, lon: -87.8762,
+        goodDirs: ['N','NNE','NE','ENE','E','ESE','SE','SSE','S'],
+        great: [14, 24], marginal: [10, 32],
+        description: 'East-facing Lake Michigan beach with solid northeasterly winds — westerly winds are offshore and dangerous here.',
+      },
+      {
+        name: 'Point Blunt', city: 'Angel Island, CA',
+        lat: 37.8532, lon: -122.4191,
+        goodDirs: ['W','WNW','NW','NNW','SW','WSW'],
+        great: [18, 28], marginal: [12, 35],
+        description: 'SE tip of Angel Island in the strongest Bay seabreeze corridor — boat-access only, strong tidal currents, advanced riders.',
+      },
+    ];
+
+    const MAX_SPEED = 35;
+    const CHART_MAX_H = 90;
+
+    let currentLocIdx = 0;
+    function getLoc() { return LOCATIONS[currentLocIdx]; }
+
+    let hourlyData = [];
+    let activeDayIdx = 0;
+    let currentDayHours = [];
+    let selectedHourIdx = null;
+
+    function selectHour(idx) {
+      selectedHourIdx = idx;
+      document.querySelectorAll('.ftwc').forEach((el, i) => {
+        el.classList.toggle('wc-selected', i === idx);
+      });
+      document.querySelectorAll('.ftgc').forEach((el, i) => {
+        el.classList.toggle('wc-selected', i === idx);
+      });
+      const h = currentDayHours[idx];
+      const compass = degreesToCompass(h.dir);
+      const verdict = getVerdict(h.speed, h.gusts, h.dir);
+      const vEl = document.getElementById('verdict');
+      vEl.className = `verdict ${verdict.cls}`;
+      vEl.querySelector('.verdict-icon').textContent = verdict.icon;
+      document.getElementById('verdict-main').textContent = verdict.main;
+      document.getElementById('verdict-note').textContent = verdict.note;
+      document.getElementById('verdict-funny').textContent = verdict.funny || '';
+      document.getElementById('verdict-wing').textContent = verdict.wing || '';
+      const outlookEl = document.getElementById('verdict-outlook');
+      if (outlookEl) outlookEl.textContent = '';
+      setDangerWarning(h.speed, h.gusts, h.dir);
+      document.getElementById('speed').innerHTML = `${h.speed}<span class="stat-unit">mph</span>`;
+      document.getElementById('gusts').textContent = `Gusts: ${h.gusts} mph`;
+      document.getElementById('arrow').textContent = degreesToArrow(h.dir);
+      document.getElementById('direction-text').textContent = compass;
+      document.getElementById('direction-deg').textContent = `${h.dir}° (from)`;
+      const pct = Math.min(Math.max((h.speed / MAX_SPEED) * 100, 2), 98);
+      document.getElementById('range-marker').style.left = `${pct}%`;
+    }
+
+    const SPOT_KEYS = ['cp', 'cf', 'lv', 'mke', 'pb'];
+
+    function initLocPills() {
+      const el = document.getElementById('loc-pills');
+      el.innerHTML = LOCATIONS.map((loc, i) =>
+        `<button class="loc-pill${i === currentLocIdx ? ' active' : ''}" onclick="switchLocation(${i})">${loc.name}</button>`
+      ).join('');
+    }
+
+    function toggleMainCalPopover(e) {
+      e.stopPropagation();
+      const key = SPOT_KEYS[currentLocIdx];
+      const loc = getLoc();
+      const pop = document.getElementById('cal-pop-main');
+      pop.innerHTML = `
+        <div class="cal-popover-title">Wind alerts for ${loc.name}</div>
+        <a class="cal-btn cal-btn-google" href="#" onclick="openGoogleCal(event,'${key}')">Add to Google Calendar</a>
+        <button class="cal-btn cal-btn-copy" onclick="copyCalLink(event,'${key}')">Copy calendar link</button>
+        <div class="cal-hint">Events appear when good wind (&gt;12 mph, right direction) is in the forecast. Updates daily.</div>
+      `;
+      pop.classList.toggle('open');
+    }
+
+    function getCalUrl(spotKey) {
+      const base = location.origin || 'https://wind.sendmo.co';
+      return `${base}/api/calendar?spots=${spotKey}`;
+    }
+
+    function toggleCalPopover(e, key) {
+      e.stopPropagation();
+      // Close all other popovers
+      document.querySelectorAll('.cal-popover').forEach(el => {
+        if (el.id !== `cal-pop-${key}`) el.classList.remove('open');
+      });
+      document.getElementById(`cal-pop-${key}`).classList.toggle('open');
+    }
+
+    function openGoogleCal(e, key) {
+      e.preventDefault();
+      e.stopPropagation();
+      const url = getCalUrl(key);
+      const gcalUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(url)}`;
+      window.open(gcalUrl, '_blank');
+      closeAllPopovers();
+    }
+
+    function copyCalLink(e, key) {
+      e.stopPropagation();
+      const url = getCalUrl(key);
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = e.target;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy calendar link'; }, 2000);
+      });
+    }
+
+    function closeAllPopovers() {
+      document.querySelectorAll('.cal-popover').forEach(el => el.classList.remove('open'));
+    }
+
+    // Close popovers when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.loc-cal-wrap')) closeAllPopovers();
+    });
+
+    function updateLocDesc() {
+      const loc = getLoc();
+      document.getElementById('loc-desc').textContent = loc.description || '';
+    }
+
+    function switchLocation(idx) {
+      currentLocIdx = idx;
+      hourlyData = [];
+      activeDayIdx = 0;
+      initLocPills();
+      const loc = getLoc();
+      document.getElementById('loc-name').textContent = loc.name;
+      document.getElementById('loc-coords').textContent =
+        `${Math.abs(loc.lat).toFixed(4)}° ${loc.lat>=0?'N':'S'}, ${Math.abs(loc.lon).toFixed(4)}° ${loc.lon>=0?'E':'W'}`;
+      updateLocDesc();
+      document.getElementById('forecast-chart').className = 'no-forecast';
+      document.getElementById('forecast-chart').textContent = 'Loading forecast…';
+      fetchWind();
+    }
+
+    function degreesToCompass(deg) {
+      const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+      return dirs[Math.round(deg / 22.5) % 16];
+    }
+
+    function degreesToArrow(deg) {
+      const arrows = ['↓','↙','←','↖','↑','↗','→','↘'];
+      return arrows[Math.round(((deg + 180) % 360) / 45) % 8];
+    }
+
+    function condClass(speed, dir) {
+      const loc = getLoc();
+      const compass = degreesToCompass(dir);
+      if (!loc.goodDirs.includes(compass)) return 'no-go';
+      if (speed >= loc.great[0] && speed <= loc.great[1]) return 'great';
+      if (speed >= loc.marginal[0] && speed <= loc.marginal[1]) return 'marginal';
+      return 'no-go';
+    }
+
+    function wingSize(speed) {
+      if (speed < 8)  return null;
+      if (speed < 12) return '6–7m wing';
+      if (speed < 16) return '5–6m wing';
+      if (speed < 22) return '4–5m wing';
+      if (speed < 28) return '3.5–4m wing';
+      return '3m wing';
+    }
+
+    function dangerWarning(speed, gusts, dirDeg) {
+      const loc = getLoc();
+      const compass = degreesToCompass(dirDeg);
+      const dirOk = loc.goodDirs.includes(compass);
+      const warnings = [];
+      if (!dirOk && speed >= 8) warnings.push(`${compass} is an offshore direction at ${loc.name} — you will be pushed away from shore.`);
+      if (speed > loc.marginal[1]) warnings.push(`${speed} mph sustained is beyond safe limits — stay out of the water.`);
+      else if (speed > loc.great[1]) warnings.push(`${speed} mph is strong — experienced riders only.`);
+      if (gusts > 35) warnings.push(`Gusts to ${gusts} mph — sudden overpowering likely.`);
+      else if (gusts > speed * 1.4 && gusts > 20) warnings.push(`Gusty conditions: ${speed} mph sustained with ${gusts} mph gusts.`);
+      return warnings.join(' ');
+    }
+
+    function setDangerWarning(speed, gusts, dirDeg) {
+      const msg = dangerWarning(speed, gusts, dirDeg);
+      const el = document.getElementById('danger-warning');
+      document.getElementById('danger-warning-text').textContent = msg;
+      el.classList.toggle('visible', !!msg);
+    }
+
+    function getVerdict(speed, gusts, dirDeg) {
+      const loc = getLoc();
+      const compass = degreesToCompass(dirDeg);
+      const dirOk = loc.goodDirs.includes(compass);
+      const [gLo, gHi] = loc.great;
+      const [mLo, mHi] = loc.marginal;
+      const wing = wingSize(speed);
+      const wingStr = wing ? `Bring your ${wing}.` : '';
+      if (speed >= gLo && speed <= gHi && dirOk)
+        return { cls:'go',       icon:'🤙', main:'GO FOIL!',     note:`${compass} winds in the sweet spot.`,
+          funny: 'Your couch can wait. The water cannot.',        wing: wingStr };
+      if (speed >= mLo && speed < gLo && dirOk)
+        return { cls:'marginal', icon:'🤔', main:'Maybe…',        note:`Light ${compass} wind.`,
+          funny: 'Technically foilable. Emotionally questionable.', wing: wingStr };
+      if (speed > gHi && speed <= mHi && dirOk)
+        return { cls:'marginal', icon:'⚠️', main:'Strong Winds',  note:`${compass} winds. Advanced riders only.`,
+          funny: 'Great day to remind yourself you signed a waiver.', wing: wingStr };
+      if (speed > mHi)
+        return { cls:'no-go',   icon:'🚫', main:'Too Windy',      note:`${speed} mph is dangerous.`,
+          funny: 'Even the seagulls called in sick.',             wing: '' };
+      if (speed < mLo)
+        return { cls:'no-go',   icon:'😴', main:'Too Light',      note:`Only ${speed} mph.`,
+          funny: 'Perfect conditions for staring at the water sadly.', wing: '' };
+      return { cls:'no-go',     icon:'🌀', main:'Bad Direction',  note:`${compass} wind won't work here.`,
+        funny: `The wind didn't get the memo about ${loc.name}.`, wing: '' };
+    }
+
+    // ---- Date parsing (avoids UTC-vs-local ambiguity in new Date("...T...")) ----
+    function parseLocalTime(str) {
+      const [date, time] = str.split('T');
+      const [y, mo, d] = date.split('-').map(Number);
+      const [hr, min] = time.split(':').map(Number);
+      return new Date(y, mo - 1, d, hr, min);
+    }
+
+    // ---- Color helpers ----
+    function windCellColors(speed, dir) {
+      const loc = getLoc();
+      const compass = degreesToCompass(dir);
+      const dirOk = loc.goodDirs.includes(compass);
+      const [gLo, gHi] = loc.great;
+      const [mLo, mHi] = loc.marginal;
+
+      if (!dirOk && speed >= mLo) return { bg:'#1a2a3a', fg:'#3d6080' };
+      if (speed < mLo)            return { bg:'#18283e', fg:'#2a4060' };
+      if (speed > mHi)            return { bg:'#500808', fg:'#f04040' };
+
+      // dist: 0 = peak great (dark green), 1 = barely marginal (yellowish-green)
+      const gMid = (gLo + gHi) / 2;
+      let dist;
+      if (speed >= gLo && speed <= gHi) {
+        dist = Math.abs(speed - gMid) / Math.max(1, (gHi - gLo) / 2) * 0.45;
+      } else if (speed < gLo) {
+        dist = 0.45 + (gLo - speed) / Math.max(1, gLo - mLo) * 0.55;
+      } else {
+        dist = 0.45 + (speed - gHi) / Math.max(1, mHi - gHi) * 0.55;
+      }
+
+      const lerp = (a, b, t) => Math.round(a + (b - a) * t);
+      // dark green (#0a4020 / #3dd870) → yellowish-green (#2e4808 / #9bc840)
+      const bg = [lerp(0x0a,0x2e,dist), lerp(0x40,0x48,dist), lerp(0x20,0x08,dist)];
+      const fg = [lerp(0x3d,0x9b,dist), lerp(0xd8,0xc8,dist), lerp(0x70,0x40,dist)];
+      const h = n => n.toString(16).padStart(2,'0');
+      return { bg:`#${h(bg[0])}${h(bg[1])}${h(bg[2])}`, fg:`#${h(fg[0])}${h(fg[1])}${h(fg[2])}` };
+    }
+
+    function gustCellColors(gust) {
+      if (gust < 5)   return { bg:'#18283e', fg:'#3d6080' };
+      if (gust < 10)  return { bg:'#1a2f44', fg:'#4a80a0' };
+      if (gust <= 15) return { bg:'#0a3a40', fg:'#40a0b0' };
+      if (gust <= 22) return { bg:'#083018', fg:'#40a860' };
+      if (gust <= 30) return { bg:'#303008', fg:'#a0c030' };
+      return                  { bg:'#402000', fg:'#d08020' };
+    }
+
+    // ---- Next good WINDow ----
+    function findNextGoodWindow() {
+      const loc = getLoc();
+      const now = new Date();
+      const days = groupByDay(hourlyData);
+      const dayKeys = Object.keys(days);
+      for (let di = 0; di < dayKeys.length; di++) {
+        const dayHours = days[dayKeys[di]].filter(h => {
+          const hr = h.time.getHours();
+          return hr >= 10 && hr <= 20;
+        });
+        for (const h of dayHours) {
+          if (h.time <= now) continue;
+          if (h.speed >= 12 && loc.goodDirs.includes(degreesToCompass(h.dir))) {
+            return { dayIdx: di, hour: h, dayKey: dayKeys[di] };
+          }
+        }
+      }
+      return null;
+    }
+
+    function updateNextWindowBtn() {
+      const btn = document.getElementById('next-window-btn');
+      if (!btn) return;
+      const result = findNextGoodWindow();
+      if (!result) {
+        btn.textContent = 'No WINDow ahead';
+        btn.classList.add('none');
+        btn.disabled = true;
+        return;
+      }
+      btn.classList.remove('none');
+      btn.disabled = false;
+      const t = result.hour.time;
+      const dayLabel = result.dayIdx === 0 ? 'Today' :
+                       result.dayIdx === 1 ? 'Tmrw' :
+                       t.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+      const hr = t.getHours();
+      const ampm = hr >= 12 ? 'pm' : 'am';
+      const hr12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
+      btn.textContent = `Next WINDow: ${dayLabel} ${hr12}${ampm} →`;
+    }
+
+    function jumpToNextGoodWindow() {
+      const result = findNextGoodWindow();
+      if (!result) return;
+      activeDayIdx = result.dayIdx;
+      selectedHourIdx = null;
+      renderForecast();
+      setTimeout(() => {
+        const idx = currentDayHours.findIndex(h => h.time.getTime() === result.hour.time.getTime());
+        if (idx >= 0) {
+          selectHour(idx);
+          const wrap = document.querySelector('.chart-wrap');
+          if (wrap) wrap.scrollLeft = Math.max(0, idx * 34 - 60);
+        }
+      }, 30);
+    }
+
+    // ---- Forecast rendering ----
+    function groupByDay(hours) {
+      const days = {};
+      for (const h of hours) {
+        const key = `${h.time.getFullYear()}-${h.time.getMonth()}-${h.time.getDate()}`;
+        if (!days[key]) days[key] = [];
+        days[key].push(h);
+      }
+      return days;
+    }
+
+    function dayLabel(key, idx) {
+      const [y, mo, d] = key.split('-').map(Number);
+      const date = new Date(y, mo, d);
+      let label;
+      if (idx === 0) label = 'Today';
+      else if (idx === 1) label = 'Tmrw';
+      else label = date.toLocaleDateString('en-US', { weekday: 'short' });
+      const dateStr = date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+      return `${label}<span class="tab-date">${dateStr}</span>`;
+    }
+
+    function renderForecast() {
+      if (!hourlyData.length) return;
+      const days = groupByDay(hourlyData);
+      const dayKeys = Object.keys(days);
+      const now = new Date();
+
+      const tabsEl = document.getElementById('day-tabs');
+      tabsEl.innerHTML = '';
+      dayKeys.forEach((key, i) => {
+        const tab = document.createElement('button');
+        tab.className = 'day-tab' + (i === activeDayIdx ? ' active' : '');
+        tab.innerHTML = dayLabel(key, i);
+        tab.onclick = () => { activeDayIdx = i; selectedHourIdx = null; renderForecast(); };
+
+        // Color tab by best wind quality that day
+        const tabLoc = getLoc();
+        const dayHrs = days[key].filter(h => { const hr = h.time.getHours(); return hr >= 10 && hr <= 20; });
+        const tabHasGreat = dayHrs.some(h => {
+          const c = degreesToCompass(h.dir);
+          return tabLoc.goodDirs.includes(c) && h.speed >= tabLoc.great[0] && h.speed <= tabLoc.great[1];
+        });
+        const tabHasMarginal = !tabHasGreat && dayHrs.some(h => {
+          const c = degreesToCompass(h.dir);
+          return tabLoc.goodDirs.includes(c) && h.speed >= tabLoc.marginal[0];
+        });
+        if (tabHasGreat) tab.classList.add('has-great');
+        else if (tabHasMarginal) tab.classList.add('has-marginal');
+
+        tabsEl.appendChild(tab);
+      });
+
+      // Filter to 10am–8pm (11 columns — keeps full hourly fidelity on mobile)
+      const hours = days[dayKeys[activeDayIdx]].filter(h => {
+        const hr = h.time.getHours();
+        return hr >= 10 && hr <= 20;
+      });
+      const displayHours = hours;
+      currentDayHours = displayHours;
+
+      const chartEl = document.getElementById('forecast-chart');
+      chartEl.className = '';
+
+      const goodDirs = getLoc().goodDirs;
+      const MAX_BAR_H = 50;
+
+      let headHTML = '<td class="ftlabel">Hour</td>';
+      let windHTML = '<td class="ftlabel">Wind<em>mph</em></td>';
+      let gustHTML = '<td class="ftlabel">Gust<em>mph</em></td>';
+
+      displayHours.forEach((h, idx) => {
+        const isNow = Math.abs(h.time - now) < 30 * 60 * 1000;
+        const nc = isNow ? ' ft-now' : '';
+        const hr = h.time.getHours();
+        const showLabel = true;
+        const compass = degreesToCompass(h.dir);
+        const dirOk = goodDirs.includes(compass);
+        const wc = windCellColors(h.speed, h.dir);
+        const gc = gustCellColors(h.gusts);
+        const barH = Math.min(Math.round((h.speed / 30) * MAX_BAR_H), MAX_BAR_H);
+        const arrowOpacity = dirOk ? '0.95' : '0.35';
+
+        let timeLabel = '';
+        if (showLabel) {
+          if (hr === 0) timeLabel = '12a';
+          else if (hr < 12) timeLabel = `${hr}a`;
+          else if (hr === 12) timeLabel = '12p';
+          else timeLabel = `${hr - 12}p`;
+        }
+
+        headHTML += `<td class="fthour${showLabel?' ftlabeled':''}${nc}">${timeLabel}</td>`;
+
+        const selCls = selectedHourIdx === idx ? ' wc-selected' : '';
+        windHTML += `<td class="ftcell ftwc${nc}${selCls}" style="background:${wc.bg};color:${wc.fg}" onclick="selectHour(${idx})">
+          <div class="wc-inner">
+            <span class="wc-speed">${h.speed}</span>
+            <div class="wc-bar-area"><div class="wc-bar" style="height:${barH}px"></div></div>
+            <span class="wc-arrow" style="transform:rotate(${h.dir}deg);opacity:${arrowOpacity}">↑</span>
+            <span class="wc-compass">${compass}</span>
+          </div>
+        </td>`;
+
+        gustHTML += `<td class="ftcell ftgc${nc}${selCls}" style="background:${gc.bg};color:${gc.fg}">${h.gusts}</td>`;
+      });
+
+      chartEl.innerHTML = `<table class="ftable"><tbody>
+        <tr>${headHTML}</tr>
+        <tr>${windHTML}</tr>
+        <tr>${gustHTML}</tr>
+      </tbody></table>`;
+
+      if (activeDayIdx === 0) {
+        const nowIdx = displayHours.findIndex(h => Math.abs(h.time - now) < 30 * 60 * 1000);
+        if (nowIdx > 4 && window.innerWidth > 500) {
+          setTimeout(() => {
+            const wrap = chartEl.closest('.chart-wrap');
+            if (wrap) wrap.scrollLeft = Math.max(0, nowIdx * 34 - 80);
+          }, 30);
+        }
+      }
+
+      updateNextWindowBtn();
+    }
+
+    // ---- Day outlook summary ----
+    function getDayOutlook() {
+      if (!hourlyData.length) return '';
+      const loc = getLoc();
+      const now = new Date();
+      const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+      const todayHours = hourlyData.filter(h => {
+        const k = `${h.time.getFullYear()}-${h.time.getMonth()}-${h.time.getDate()}`;
+        return k === todayKey && h.time.getHours() >= 10 && h.time.getHours() <= 20;
+      });
+      const fmt = t => {
+        const hr = t.getHours();
+        return `${hr === 0 ? 12 : hr > 12 ? hr - 12 : hr}${hr >= 12 ? 'pm' : 'am'}`;
+      };
+      const isRideable = h => {
+        const c = degreesToCompass(h.dir);
+        return loc.goodDirs.includes(c) && h.speed >= loc.marginal[0];
+      };
+      const isGreat = h => {
+        const c = degreesToCompass(h.dir);
+        return loc.goodDirs.includes(c) && h.speed >= loc.great[0] && h.speed <= loc.great[1];
+      };
+      const upcoming = todayHours.filter(h => h.time >= now);
+      const futureGood = upcoming.filter(isRideable);
+      if (!futureGood.length) {
+        const pastGood = todayHours.filter(h => h.time < now && isRideable(h));
+        return pastGood.length ? 'Window passed for today' : 'No rideable window today';
+      }
+      const first = futureGood[0];
+      const last  = futureGood[futureGood.length - 1];
+      const hasGreat = futureGood.some(isGreat);
+      const quality = hasGreat ? 'Great' : 'Rideable';
+      // Is it currently good (within 30 min of now)?
+      const nowHour = todayHours.find(h => Math.abs(h.time - now) < 30 * 60 * 1000);
+      const currentlyGood = nowHour && isRideable(nowHour);
+      if (currentlyGood) {
+        return `${quality} now through ${fmt(last.time)}`;
+      }
+      if (first === last) return `Should be rideable at ${fmt(first.time)}`;
+      return `Should be rideable ${fmt(first.time)}–${fmt(last.time)}`;
+    }
+
+    // ---- Main fetch ----
+    async function fetchWind() {
+      document.getElementById('error-msg').textContent = '';
+
+      const loc = getLoc();
+      const base = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}`;
+      const params = `&wind_speed_unit=mph&timezone=America%2FLos_Angeles`;
+      const currentUrl = base + `&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m` + params;
+      const hourlyUrl  = base + `&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&forecast_days=10` + params;
+
+      try {
+        const [currentRes, hourlyRes] = await Promise.all([fetch(currentUrl), fetch(hourlyUrl)]);
+        if (!currentRes.ok) throw new Error(`Current API error: ${currentRes.status}`);
+        if (!hourlyRes.ok)  throw new Error(`Hourly API error: ${hourlyRes.status}`);
+
+        const [cData, hData] = await Promise.all([currentRes.json(), hourlyRes.json()]);
+
+        // --- Current conditions ---
+        const c = cData.current;
+        const speed  = Math.round(c.wind_speed_10m);
+        const gusts  = Math.round(c.wind_gusts_10m);
+        const dir    = c.wind_direction_10m;
+        const compass = degreesToCompass(dir);
+        const verdict = getVerdict(speed, gusts, dir);
+
+        const vEl = document.getElementById('verdict');
+        vEl.className = `verdict ${verdict.cls}`;
+        vEl.querySelector('.verdict-icon').textContent = verdict.icon;
+        document.getElementById('verdict-main').textContent = verdict.main;
+        document.getElementById('verdict-note').textContent = verdict.note;
+        document.getElementById('verdict-funny').textContent = verdict.funny || '';
+        document.getElementById('verdict-wing').textContent = verdict.wing || '';
+        setDangerWarning(speed, gusts, dir);
+
+        document.getElementById('speed').innerHTML = `${speed}<span class="stat-unit">mph</span>`;
+        document.getElementById('gusts').textContent = `Gusts: ${gusts} mph`;
+        document.getElementById('arrow').textContent = degreesToArrow(dir);
+        document.getElementById('direction-text').textContent = compass;
+        document.getElementById('direction-deg').textContent = `${dir}° (from)`;
+
+        const pct = Math.min(Math.max((speed / MAX_SPEED) * 100, 2), 98);
+        document.getElementById('range-marker').style.left = `${pct}%`;
+
+        // --- Hourly forecast ---
+        const h = hData.hourly;
+        hourlyData = h.time.map((t, i) => ({
+          time:  parseLocalTime(t),
+          speed: Math.round(h.wind_speed_10m[i]),
+          gusts: Math.round(h.wind_gusts_10m[i]),
+          dir:   h.wind_direction_10m[i],
+        }));
+        renderForecast();
+        const outlookEl = document.getElementById('verdict-outlook');
+        if (outlookEl) outlookEl.textContent = getDayOutlook();
+
+        // Updated timestamp
+        const now = new Date();
+        document.getElementById('updated').textContent =
+          `Updated ${now.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' })}`;
+
+      } catch (e) {
+        document.getElementById('error-msg').textContent = `Could not load wind data. ${e.message}`;
+        document.getElementById('forecast-chart').className = 'no-forecast';
+        document.getElementById('forecast-chart').textContent = 'Forecast unavailable.';
+      } finally {
+      }
+    }
+
+    // ---- Install to Home Screen ----
+    (function initInstallBanner() {
+      // Don't show if already installed (standalone mode) or previously dismissed
+      if (window.navigator.standalone === true) return; // iOS standalone
+      if (window.matchMedia('(display-mode: standalone)').matches) return; // Android standalone
+      if (localStorage.getItem('pwa-install-dismissed')) return;
+
+      const banner  = document.getElementById('install-banner');
+      const sub     = document.getElementById('install-sub');
+      const btn     = document.getElementById('install-btn');
+      const dismiss = document.getElementById('install-dismiss');
+
+      function showBanner() { banner.classList.add('visible'); }
+
+      function hideBanner() {
+        banner.classList.remove('visible');
+        localStorage.setItem('pwa-install-dismissed', '1');
+      }
+
+      dismiss.addEventListener('click', hideBanner);
+
+      const ua = navigator.userAgent;
+      const isIOS = /iphone|ipad|ipod/i.test(ua);
+      const isAndroid = /android/i.test(ua);
+      const isSafari = /safari/i.test(ua) && !/chrome/i.test(ua);
+
+      if (isIOS && isSafari) {
+        // iOS Safari: must use share sheet — no programmatic prompt possible
+        sub.innerHTML = 'Tap <strong>Share</strong> &#x2B06; then <strong>Add to Home Screen</strong>';
+        showBanner();
+      } else if (isAndroid || (!isIOS && !isSafari)) {
+        // Android Chrome (and desktop Chrome): intercept beforeinstallprompt
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+          sub.innerHTML = 'Get quick access to wind conditions from your home screen.';
+          btn.style.display = 'block';
+          showBanner();
+        });
+
+        btn.addEventListener('click', async () => {
+          if (!deferredPrompt) return;
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          deferredPrompt = null;
+          hideBanner();
+        });
+      }
+    })();
+
+    initLocPills();
+    updateLocDesc();
+    fetchWind();
+    setInterval(fetchWind, 10 * 60 * 1000);
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>

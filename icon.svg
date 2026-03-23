@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="114" fill="#0f2040"/>
+  <!-- Wind waves -->
+  <path d="M80 200 Q160 170 240 200 Q320 230 400 200 Q440 185 460 190" stroke="#4cd97a" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <path d="M80 256 Q160 226 240 256 Q320 286 400 256 Q440 241 460 246" stroke="#7ab8e8" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <path d="M80 312 Q140 282 200 312 Q260 342 320 312 Q360 297 380 302" stroke="#4cd97a" stroke-width="16" stroke-linecap="round" fill="none" opacity="0.6"/>
+</svg>
