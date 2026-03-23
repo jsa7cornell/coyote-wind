@@ -175,11 +175,11 @@
     /* --- Verdict --- */
     .verdict {
       display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      padding: 20px 24px;
-      border-radius: 14px;
-      margin-bottom: 32px;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      margin-bottom: 20px;
       transition: all 0.4s ease;
     }
     .verdict.go      { background: linear-gradient(135deg,#0d3d1f,#0a4a1a); border: 1px solid #1a7a35; }
@@ -187,15 +187,15 @@
     .verdict.no-go   { background: linear-gradient(135deg,#3d0f0f,#4a0a0a); border: 1px solid #7a1515; }
     .verdict.loading { background: #0d1e35; border: 1px solid #1e3a5f; }
 
-    .verdict-icon { font-size: 36px; line-height: 1; }
-    .verdict-text { flex: 1; }
-    .verdict-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.6; margin-bottom: 2px; }
-    .verdict-main  { font-size: 22px; font-weight: 700; }
+    .verdict-icon { font-size: 20px; flex-shrink: 0; line-height: 1; }
+    .verdict-body { flex: 1; min-width: 0; }
+    .verdict-row1 { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+    .verdict-main { font-size: 15px; font-weight: 700; }
     .verdict.go       .verdict-main { color: #4cd97a; }
     .verdict.marginal .verdict-main { color: #f5c842; }
     .verdict.no-go    .verdict-main { color: #f55; }
     .verdict.loading  .verdict-main { color: #5b8ab0; }
-    .verdict-note { font-size: 13px; opacity: 0.7; margin-top: 2px; }
+    .verdict-meta { font-size: 12px; color: rgba(255,255,255,0.5); }
 
     /* --- Stats --- */
     .stats {
@@ -553,17 +553,11 @@
 
     .ftgc  { height: 28px; font-size: 11px; }
 
-    .verdict-outlook { font-size: 12px; font-weight: 500; margin-top: 5px; }
+    .verdict-outlook { font-size: 11px; font-weight: 500; margin-top: 3px; }
     .verdict.go       .verdict-outlook { color: #6ee892; }
     .verdict.marginal .verdict-outlook { color: #e8d060; }
     .verdict.no-go    .verdict-outlook { color: #7ab8e8; }
     .verdict.loading  .verdict-outlook { display: none; }
-    .verdict-funny { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 5px; font-style: italic; }
-    .verdict-wing  { font-size: 12px; font-weight: 600; margin-top: 2px; }
-    .verdict.go .verdict-wing       { color: #4cd97a; }
-    .verdict.marginal .verdict-wing { color: #f5c842; }
-    .verdict.no-go .verdict-wing    { color: #888; }
-    .verdict.loading .verdict-wing  { display: none; }
 
     .danger-warning {
       display: none;
@@ -742,20 +736,19 @@
     <div class="loc-desc" id="loc-desc"></div>
 
     <div class="verdict loading" id="verdict">
-      <div class="verdict-icon">💨</div>
-      <div class="verdict-text">
-        <div class="verdict-label">Conditions</div>
-        <div class="verdict-main" id="verdict-main">Loading…</div>
-        <div class="verdict-note" id="verdict-note">Fetching latest wind data</div>
+      <div class="verdict-icon" id="verdict-icon">💨</div>
+      <div class="verdict-body">
+        <div class="verdict-row1">
+          <span class="verdict-main" id="verdict-main">Loading…</span>
+          <span class="verdict-meta" id="verdict-meta"></span>
+        </div>
         <div class="verdict-outlook" id="verdict-outlook"></div>
-        <div class="verdict-funny" id="verdict-funny"></div>
-        <div class="verdict-wing" id="verdict-wing"></div>
         <div class="danger-warning" id="danger-warning">
           <span class="danger-warning-icon">⚠️</span>
           <span id="danger-warning-text"></span>
         </div>
-        <button class="next-window-btn none" id="next-window-btn" onclick="jumpToNextGoodWindow()" disabled>Next WINDow →</button>
       </div>
+      <button class="next-window-btn none" id="next-window-btn" onclick="jumpToNextGoodWindow()" disabled></button>
     </div>
 
     <div class="stats">
@@ -893,13 +886,10 @@
       const verdict = getVerdict(h.speed, h.gusts, h.dir);
       const vEl = document.getElementById('verdict');
       vEl.className = `verdict ${verdict.cls}`;
-      vEl.querySelector('.verdict-icon').textContent = verdict.icon;
+      document.getElementById('verdict-icon').textContent = verdict.icon;
       document.getElementById('verdict-main').textContent = verdict.main;
-      document.getElementById('verdict-note').textContent = verdict.note;
-      document.getElementById('verdict-funny').textContent = verdict.funny || '';
-      document.getElementById('verdict-wing').textContent = verdict.wing || '';
-      const outlookEl = document.getElementById('verdict-outlook');
-      if (outlookEl) outlookEl.textContent = '';
+      document.getElementById('verdict-meta').textContent = `${h.speed} mph · ${compass}`;
+      document.getElementById('verdict-outlook').textContent = '';
       setDangerWarning(h.speed, h.gusts, h.dir);
       document.getElementById('speed').innerHTML = `${h.speed}<span class="stat-unit">mph</span>`;
       document.getElementById('gusts').textContent = `Gusts: ${h.gusts} mph`;
@@ -1158,7 +1148,7 @@
       const hr = t.getHours();
       const ampm = hr >= 12 ? 'pm' : 'am';
       const hr12 = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
-      btn.textContent = `Next WINDow: ${dayLabel} ${hr12}${ampm} →`;
+      btn.textContent = `${dayLabel} ${hr12}${ampm} →`;
     }
 
     function jumpToNextGoodWindow() {
@@ -1327,19 +1317,23 @@
       const upcoming = todayHours.filter(h => h.time >= now);
       const futureGood = upcoming.filter(isRideable);
       if (!futureGood.length) {
-        const pastGood = todayHours.filter(h => h.time < now && isRideable(h));
-        return pastGood.length ? 'Window passed for today' : 'No rideable window today';
+        // Look for next day with a rideable window
+        const nextResult = findNextGoodWindow();
+        if (nextResult) {
+          const t = nextResult.hour.time;
+          const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+          const dayStr = nextResult.dayIdx === 1 ? 'Tmrw' : days[t.getDay()];
+          return `No window today — next: ${dayStr} ${fmt(t)}`;
+        }
+        return 'No rideable window in the next 10 days';
       }
       const first = futureGood[0];
       const last  = futureGood[futureGood.length - 1];
       const hasGreat = futureGood.some(isGreat);
       const quality = hasGreat ? 'Great' : 'Rideable';
-      // Is it currently good (within 30 min of now)?
       const nowHour = todayHours.find(h => Math.abs(h.time - now) < 30 * 60 * 1000);
       const currentlyGood = nowHour && isRideable(nowHour);
-      if (currentlyGood) {
-        return `${quality} now through ${fmt(last.time)}`;
-      }
+      if (currentlyGood) return `${quality} now through ${fmt(last.time)}`;
       if (first === last) return `Should be rideable at ${fmt(first.time)}`;
       return `Should be rideable ${fmt(first.time)}–${fmt(last.time)}`;
     }
@@ -1371,11 +1365,9 @@
 
         const vEl = document.getElementById('verdict');
         vEl.className = `verdict ${verdict.cls}`;
-        vEl.querySelector('.verdict-icon').textContent = verdict.icon;
+        document.getElementById('verdict-icon').textContent = verdict.icon;
         document.getElementById('verdict-main').textContent = verdict.main;
-        document.getElementById('verdict-note').textContent = verdict.note;
-        document.getElementById('verdict-funny').textContent = verdict.funny || '';
-        document.getElementById('verdict-wing').textContent = verdict.wing || '';
+        document.getElementById('verdict-meta').textContent = `${speed} mph · ${compass}`;
         setDangerWarning(speed, gusts, dir);
 
         document.getElementById('speed').innerHTML = `${speed}<span class="stat-unit">mph</span>`;
