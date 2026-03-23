@@ -628,6 +628,45 @@
     }
     .install-banner-dismiss:hover { color: #5b8ab0; }
 
+    /* --- Calendar month view --- */
+    .cal-view { padding: 0 18px 16px; }
+    .cal-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 0 12px;
+    }
+    .cal-nav-btn {
+      background: none; border: none; color: #5b8ab0;
+      font-size: 20px; cursor: pointer; padding: 2px 8px;
+      border-radius: 6px; transition: color 0.15s, background 0.15s; line-height: 1;
+    }
+    .cal-nav-btn:hover  { color: #7ab8e8; background: #132a48; }
+    .cal-nav-btn:disabled { color: #1e3050; cursor: default; background: none; }
+    .cal-month-label { font-size: 13px; font-weight: 600; color: #e8f4fd; }
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
+    }
+    .cal-dow {
+      text-align: center; font-size: 9px; color: #3d6080;
+      font-weight: 600; text-transform: uppercase; padding: 0 0 4px;
+    }
+    .cal-day {
+      border-radius: 5px; display: flex; align-items: center;
+      justify-content: center; font-size: 11px; font-weight: 600;
+      aspect-ratio: 1; min-height: 0; transition: filter 0.1s;
+    }
+    .cal-day.cd-empty    { background: transparent; }
+    .cal-day.cd-past-none     { background: #0c1928; color: #273848; }
+    .cal-day.cd-past-marginal { background: #192808; color: #527828; }
+    .cal-day.cd-past-great    { background: #082414; color: #288040; }
+    .cal-day.cd-future-none     { background: #0c1928; color: #273848; }
+    .cal-day.cd-future-marginal { background: #1c2c06; color: #7aaa28; cursor: pointer; }
+    .cal-day.cd-future-great    { background: #0a3018; color: #3dd870; cursor: pointer; }
+    .cal-day.cd-beyond  { background: transparent; color: #192840; }
+    .cal-day.cd-loading { background: #0c1928; color: #1a2a3a; }
+    .cal-day.cd-today   { box-shadow: 0 0 0 1.5px #4a6a8a; color: #e8f4fd !important; }
+    .cal-day.cd-clickable:hover { filter: brightness(1.3); }
+    .cal-loading { text-align: center; font-size: 12px; color: #3d6080; padding: 24px 0; }
+
     /* --- Mobile layout --- */
     @media (max-width: 500px) {
       body { padding: 8px; justify-content: flex-start; padding-top: 12px; }
@@ -663,6 +702,10 @@
 
       /* Loc pills tighter */
       .loc-pill { padding: 5px 10px; font-size: 11px; }
+
+      /* Calendar on mobile */
+      .cal-view { padding: 0 8px 12px; }
+      .cal-day { font-size: 10px; }
     }
   </style>
 </head>
@@ -676,13 +719,18 @@
       <div class="forecast-header">
         <div class="forecast-header-row">
           <span class="forecast-title">Hourly Forecast</span>
+          <div class="view-toggle">
+            <button class="view-btn active" id="view-hours" onclick="setView('hours')">Hours</button>
+            <button class="view-btn" id="view-month" onclick="setView('month')">Month</button>
+          </div>
         </div>
         <div id="forecast-summary" class="forecast-summary"></div>
         <div class="day-tabs" id="day-tabs"></div>
       </div>
-      <div class="chart-wrap">
+      <div class="chart-wrap" id="chart-wrap">
         <div id="forecast-chart" class="no-forecast">Loading forecast…</div>
       </div>
+      <div id="cal-view" class="cal-view" style="display:none"></div>
     </div>
 
     <!-- Calendar subscribe -->
@@ -890,6 +938,7 @@
       renderCalCard();
       document.getElementById('forecast-chart').className = 'no-forecast';
       document.getElementById('forecast-chart').textContent = 'Loading forecast…';
+      if (currentView === 'month') { const n = new Date(); calYear = n.getFullYear(); calMonth = n.getMonth(); }
       fetchWind();
     }
 
@@ -1275,6 +1324,7 @@
         }));
         renderForecast();
         updateForecastSummary();
+        if (currentView === 'month') renderCalView();
 
         // Updated timestamp
         const now = new Date();
@@ -1339,6 +1389,171 @@
         });
       }
     })();
+
+    // ---- Calendar month view ----
+    let currentView = 'hours';
+    let calYear = null, calMonth = null;
+    let archiveCache = {}; // archiveCache[locIdx][YYYY-MM] = {YYYY-MM-DD:'great'|'marginal'|'none'} or null (loading)
+
+    function setView(view) {
+      currentView = view;
+      document.getElementById('view-hours').classList.toggle('active', view === 'hours');
+      document.getElementById('view-month').classList.toggle('active', view === 'month');
+      document.getElementById('day-tabs').style.display   = view === 'hours' ? '' : 'none';
+      document.getElementById('chart-wrap').style.display = view === 'hours' ? '' : 'none';
+      document.getElementById('cal-view').style.display   = view === 'month' ? '' : 'none';
+      if (view === 'month') {
+        if (calYear === null) { const n = new Date(); calYear = n.getFullYear(); calMonth = n.getMonth(); }
+        renderCalView();
+      }
+    }
+
+    function dayQuality(hours, loc) {
+      const hasGreat = hours.some(h => {
+        const c = degreesToCompass(h.dir);
+        return loc.goodDirs.includes(c) && h.speed >= loc.great[0] && h.speed <= loc.great[1];
+      });
+      if (hasGreat) return 'great';
+      const hasMarginal = hours.some(h => {
+        const c = degreesToCompass(h.dir);
+        return loc.goodDirs.includes(c) && h.speed >= loc.marginal[0];
+      });
+      return hasMarginal ? 'marginal' : 'none';
+    }
+
+    function dayQualityFromForecast(y, m, d) {
+      // y,m,d where m is 0-indexed (matches h.time.getMonth())
+      const key = `${y}-${m}-${d}`;
+      const hrs = hourlyData.filter(h => {
+        const hk = `${h.time.getFullYear()}-${h.time.getMonth()}-${h.time.getDate()}`;
+        return hk === key && h.time.getHours() >= 10 && h.time.getHours() <= 20;
+      }).map(h => ({ speed: h.speed, dir: h.dir }));
+      if (!hrs.length) return null;
+      return dayQuality(hrs, getLoc());
+    }
+
+    async function fetchArchiveMonth(year, month, locIdx) {
+      const mKey = `${year}-${String(month+1).padStart(2,'0')}`;
+      if (!archiveCache[locIdx]) archiveCache[locIdx] = {};
+      if (archiveCache[locIdx][mKey] !== undefined) return;
+      archiveCache[locIdx][mKey] = null; // mark loading
+
+      const loc = LOCATIONS[locIdx];
+      const startDate = `${year}-${String(month+1).padStart(2,'0')}-01`;
+      const lastDay = new Date(year, month+1, 0).getDate();
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 5);
+      const endOfMonth = new Date(year, month, lastDay);
+
+      if (new Date(year, month, 1) > cutoff) { archiveCache[locIdx][mKey] = {}; return; }
+
+      const end = endOfMonth > cutoff ? cutoff : endOfMonth;
+      const endDate = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')}`;
+      if (endDate < startDate) { archiveCache[locIdx][mKey] = {}; return; }
+
+      try {
+        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${loc.lat}&longitude=${loc.lon}&start_date=${startDate}&end_date=${endDate}&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=mph&timezone=America%2FLos_Angeles`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        const dayHours = {};
+        data.hourly.time.forEach((t, i) => {
+          const dt = parseLocalTime(t);
+          const hr = dt.getHours();
+          if (hr < 10 || hr > 20) return;
+          const dk = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+          if (!dayHours[dk]) dayHours[dk] = [];
+          dayHours[dk].push({ speed: Math.round(data.hourly.wind_speed_10m[i]), dir: data.hourly.wind_direction_10m[i] });
+        });
+        const result = {};
+        for (const [dk, hrs] of Object.entries(dayHours)) result[dk] = dayQuality(hrs, loc);
+        archiveCache[locIdx][mKey] = result;
+      } catch(e) {
+        archiveCache[locIdx][mKey] = {};
+      }
+    }
+
+    function calDayClick(y, m, d) {
+      // Find dayIdx in hourlyData groupByDay (m is 0-indexed)
+      const days = groupByDay(hourlyData);
+      const keys = Object.keys(days);
+      const key = `${y}-${m}-${d}`;
+      const idx = keys.indexOf(key);
+      if (idx >= 0) { activeDayIdx = idx; selectedHourIdx = null; setView('hours'); renderForecast(); }
+    }
+
+    function prevMonth() {
+      calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; }
+      renderCalView();
+    }
+    function nextMonth() {
+      calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; }
+      renderCalView();
+    }
+
+    async function renderCalView() {
+      const cv = document.getElementById('cal-view');
+      if (!cv || currentView !== 'month') return;
+
+      const now = new Date();
+      const todayY = now.getFullYear(), todayM = now.getMonth(), todayD = now.getDate();
+      const mKey = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
+
+      // Check if archive needed
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 5);
+      const needsArchive = new Date(calYear, calMonth, 1) <= cutoff;
+      if (needsArchive && (!archiveCache[currentLocIdx] || archiveCache[currentLocIdx][mKey] === undefined)) {
+        cv.innerHTML = `<div class="cal-nav"><button class="cal-nav-btn" onclick="prevMonth()">‹</button><span class="cal-month-label">${['January','February','March','April','May','June','July','August','September','October','November','December'][calMonth]} ${calYear}</span><button class="cal-nav-btn" onclick="nextMonth()">›</button></div><div class="cal-loading">Loading historical data…</div>`;
+        await fetchArchiveMonth(calYear, calMonth, currentLocIdx);
+        if (currentView !== 'month') return;
+        renderCalView(); return;
+      }
+      if (needsArchive && archiveCache[currentLocIdx][mKey] === null) {
+        cv.innerHTML = `<div class="cal-loading">Loading…</div>`; return;
+      }
+
+      const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const archiveData = (archiveCache[currentLocIdx] && archiveCache[currentLocIdx][mKey]) || {};
+      const firstDow = new Date(calYear, calMonth, 1).getDay();
+      const lastDay = new Date(calYear, calMonth+1, 0).getDate();
+
+      // Max navigable: next month from today (forecast covers ~10 days)
+      const maxY = todayM === 11 ? todayY+1 : todayY;
+      const maxM = (todayM + 1) % 12;
+      const atMax = calYear > maxY || (calYear === maxY && calMonth >= maxM);
+      const atMin = calYear < 2020;
+
+      let grid = '<div class="cal-dow">Su</div><div class="cal-dow">Mo</div><div class="cal-dow">Tu</div><div class="cal-dow">We</div><div class="cal-dow">Th</div><div class="cal-dow">Fr</div><div class="cal-dow">Sa</div>';
+      for (let i = 0; i < firstDow; i++) grid += '<div class="cal-day cd-empty"></div>';
+
+      for (let d = 1; d <= lastDay; d++) {
+        const isToday = calYear===todayY && calMonth===todayM && d===todayD;
+        const dayDate = new Date(calYear, calMonth, d);
+        const isPast   = dayDate < new Date(todayY, todayM, todayD);
+        const dk = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+        // Quality: prefer forecast data (accurate for today+future), fall back to archive
+        const fq = dayQualityFromForecast(calYear, calMonth, d); // null if not in forecast
+        const quality = fq !== null ? fq : (archiveData[dk] || null);
+        const prefix = isPast ? 'cd-past' : 'cd-future';
+        const qClass = quality !== null ? `${prefix}-${quality}` : (isPast ? 'cd-past-none' : 'cd-beyond');
+
+        let clickable = '';
+        if (!isPast && fq !== null && fq !== 'none') {
+          clickable = ` cd-clickable" onclick="calDayClick(${calYear},${calMonth},${d})`;
+        }
+
+        const todayCls = isToday ? ' cd-today' : '';
+        grid += `<div class="cal-day ${qClass}${todayCls}${clickable}">${d}</div>`;
+      }
+
+      cv.innerHTML = `
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="prevMonth()" ${atMin?'disabled':''}>‹</button>
+          <span class="cal-month-label">${MONTHS[calMonth]} ${calYear}</span>
+          <button class="cal-nav-btn" onclick="nextMonth()" ${atMax?'disabled':''}>›</button>
+        </div>
+        <div class="cal-grid">${grid}</div>`;
+    }
 
     initLocPills();
     updateLocDesc();

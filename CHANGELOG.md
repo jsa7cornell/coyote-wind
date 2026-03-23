@@ -26,6 +26,30 @@
 
 ---
 
+## [2026-03-23] — Calendar month view with historical wind data
+
+**Deploy:** `vercel --prod` → https://wind.sendmo.co
+
+### What shipped
+- **Month view** — toggle between Hours and Month in the forecast header. Month grid shows every day color-coded by wind quality (green = great, olive = marginal, dim = no wind).
+- **Historical data** — past months fetch from Open-Meteo archive API (available back to 1940, ~5-day lag). In-memory cache so navigating back is instant.
+- **Today highlighted** — current day has a white border ring in the grid.
+- **Tap to jump** — tapping a future day (within forecast window) switches to Hours view for that day.
+- **Month navigation** — ‹ › arrows navigate months; forward limited to current month + 1 (forecast range), backward to 2020.
+- **Mobile-ready** — calendar grid scales to full width on iPhone with smaller day cells.
+
+### What changed (files)
+- `index.html` — added `.cal-view` CSS block + mobile override; `view-toggle` buttons in forecast header; `#cal-view` div sibling to `#chart-wrap`; `setView()`, `dayQuality()`, `dayQualityFromForecast()`, `fetchArchiveMonth()`, `calDayClick()`, `prevMonth()`, `nextMonth()`, `renderCalView()` functions; `switchLocation()` resets calYear/calMonth in month view; `fetchWind()` triggers re-render of calendar when in month view
+- `sw.js` — bumped cache to `coyote-wind-v11`
+
+### Notes
+- Archive API URL: `https://archive-api.open-meteo.com/v1/archive` — same params as forecast, ~5ms response, no auth needed
+- `archiveCache[locIdx][YYYY-MM]` = `{YYYY-MM-DD: 'great'|'marginal'|'none'}` or `null` (loading)
+- Quality computation uses same `goodDirs` + `great`/`marginal` ranges per location — identical logic to forecast coloring
+- Days in the ~5-day archive lag show as dim (no data) — intentional, not a bug
+
+---
+
 ## [2026-03-23] — Wind quality colors, colored day tabs, mobile layout, day outlook summary
 
 **Commit:** `28d2abb`
