@@ -593,22 +593,28 @@
     .app-name-wind { color: #4cd97a; }
     .app-name-ow   { color: #3d6080; }
 
-    /* --- Calendar promo strip --- */
-    .cal-promo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    /* --- Calendar card --- */
+    .cal-card {
       background: #0d1e35;
       border: 1px solid #1e3a5f;
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-top: 16px;
-      font-size: 12px;
-      color: #5b8ab0;
-      line-height: 1.4;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
     }
-    .cal-promo-icon { font-size: 18px; flex-shrink: 0; }
-    .cal-promo strong { color: #7ab8e8; font-weight: 600; }
+    .cal-card-title { font-size: 12px; font-weight: 600; color: #7ab8e8; margin-bottom: 10px; }
+    .cal-card-btns  { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .cal-card-btns .cal-btn { flex: 1; min-width: 120px; margin-bottom: 0; }
+    .cal-card-hint  { font-size: 10px; color: #3d6080; line-height: 1.4; }
+
+    /* --- About section --- */
+    .about-section {
+      background: #0d1e35;
+      border: 1px solid #1e3a5f;
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+    }
+    .about-section h1 { font-size: 17px; font-weight: 700; color: #e8f4fd; margin-bottom: 3px; }
 
     /* --- Footer note --- */
     .spots-note {
@@ -705,15 +711,6 @@
   <div class="card">
     <div class="app-name"><span class="app-name-wind">WIND</span><span class="app-name-ow">ow</span></div>
     <div class="loc-pills" id="loc-pills"></div>
-    <div class="loc-header">
-      <h1 id="loc-name">Coyote Point</h1>
-      <div class="loc-cal-wrap">
-        <button class="cal-icon" onclick="toggleMainCalPopover(event)" title="Subscribe to wind alerts">📅</button>
-        <div class="cal-popover" id="cal-pop-main"></div>
-      </div>
-    </div>
-    <div class="coords" id="loc-coords">37.5933° N, 122.3196° W</div>
-    <div class="loc-desc" id="loc-desc"></div>
 
     <div class="verdict loading" id="verdict">
       <div class="verdict-icon" id="verdict-icon">💨</div>
@@ -731,7 +728,23 @@
       <button class="next-window-btn none" id="next-window-btn" onclick="jumpToNextGoodWindow()" disabled></button>
     </div>
 
+    <!-- Forecast -->
+    <div class="forecast-section">
+      <div class="forecast-header">
+        <div class="forecast-header-row">
+          <span class="forecast-title">Hourly Forecast</span>
+        </div>
+        <div class="day-tabs" id="day-tabs"></div>
+      </div>
+      <div class="chart-wrap">
+        <div id="forecast-chart" class="no-forecast">Loading forecast…</div>
+      </div>
+    </div>
 
+    <!-- Calendar subscribe -->
+    <div class="cal-card" id="cal-card"></div>
+
+    <!-- Wingfoil range bar -->
     <div class="wind-range">
       <div class="wind-range-label">Wingfoil Wind Window (mph)</div>
       <div class="range-bar">
@@ -749,27 +762,15 @@
       </div>
     </div>
 
-    <!-- Forecast -->
-    <div class="forecast-section">
-      <div class="forecast-header">
-        <div class="forecast-header-row">
-          <span class="forecast-title">Hourly Forecast</span>
-        </div>
-        <div class="day-tabs" id="day-tabs"></div>
-      </div>
-      <div class="chart-wrap">
-        <div id="forecast-chart" class="no-forecast">Loading forecast…</div>
-      </div>
+    <!-- About this spot (SEO content) -->
+    <div class="about-section">
+      <h1 id="loc-name">Coyote Point</h1>
+      <div class="coords" id="loc-coords">37.5933° N, 122.3196° W</div>
+      <div class="loc-desc" id="loc-desc"></div>
     </div>
 
     <div class="updated" id="updated">—</div>
     <div class="error-msg" id="error-msg"></div>
-
-    <!-- Calendar promo -->
-    <div class="cal-promo">
-      <span class="cal-promo-icon">📅</span>
-      <span>Get <strong>wind alerts in your calendar</strong> — events appear when conditions are good, disappear when they're not. Tap <strong>📅</strong> next to the spot name to subscribe.</span>
-    </div>
 
     <!-- Install to home screen banner -->
     <div class="install-banner" id="install-banner">
@@ -928,6 +929,19 @@
       document.getElementById('loc-desc').textContent = loc.description || '';
     }
 
+    function renderCalCard() {
+      const key = SPOT_KEYS[currentLocIdx];
+      const loc = getLoc();
+      document.getElementById('cal-card').innerHTML = `
+        <div class="cal-card-title">📅 Wind alerts — ${loc.name}</div>
+        <div class="cal-card-btns">
+          <a class="cal-btn cal-btn-google" href="#" onclick="openGoogleCal(event,'${key}')">Add to Google Calendar</a>
+          <button class="cal-btn cal-btn-copy" onclick="copyCalLink(event,'${key}')">Copy link</button>
+        </div>
+        <div class="cal-card-hint">Events appear when good wind is forecast. Disappear when conditions drop. Updates daily.</div>
+      `;
+    }
+
     function switchLocation(idx) {
       currentLocIdx = idx;
       hourlyData = [];
@@ -938,6 +952,7 @@
       document.getElementById('loc-coords').textContent =
         `${Math.abs(loc.lat).toFixed(4)}° ${loc.lat>=0?'N':'S'}, ${Math.abs(loc.lon).toFixed(4)}° ${loc.lon>=0?'E':'W'}`;
       updateLocDesc();
+      renderCalCard();
       document.getElementById('forecast-chart').className = 'no-forecast';
       document.getElementById('forecast-chart').textContent = 'Loading forecast…';
       fetchWind();
@@ -1410,6 +1425,7 @@
 
     initLocPills();
     updateLocDesc();
+    renderCalCard();
     fetchWind();
     setInterval(fetchWind, 10 * 60 * 1000);
 

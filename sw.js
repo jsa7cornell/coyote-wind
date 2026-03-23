@@ -1,4 +1,4 @@
-const CACHE = 'coyote-wind-v8';
+const CACHE = 'coyote-wind-v9';
 const ASSETS = ['/', '/index.html', '/icon.svg', '/manifest.json'];
 
 self.addEventListener('install', e => {
